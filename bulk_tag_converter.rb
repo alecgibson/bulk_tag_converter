@@ -37,8 +37,8 @@ def to_rows(spreadsheet)
 
           next if row[tag_column].nil? || BLANK_MATCHER =~ row[tag_column]
           raise "Empty URL" if row[URL_COLUMN].nil? || row[URL_COLUMN].empty?
-          raise "No Tag#{tag_number} ID" if row[tag_id_column].nil? || row[tag_id_column].empty?
-          raise "Invalid Tag#{tag_number} ID" unless UUID_MATCHER =~ row[tag_id_column]
+          raise "No Tag#{tag_number} ID for tag '#{row[tag_column]}'" if row[tag_id_column].nil? || row[tag_id_column].empty?
+          raise "Invalid Tag#{tag_number} ID for tag '#{row[tag_column]}'" unless UUID_MATCHER =~ row[tag_id_column]
 
           r << {
             content_base_path: row[URL_COLUMN].match(SLUG_MATCHER)[:slug],
