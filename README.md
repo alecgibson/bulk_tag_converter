@@ -1,7 +1,7 @@
 # Bulk Tag Converter Tool
 
 This tool is designed to convert taxon tagging spreadsheets to a format
-accepted by [Content Tagger|https://github.com/alphagov/content-tagger].
+accepted by [Content Tagger](https://github.com/alphagov/content-tagger).
 
 ## Preparing the spreadsheet
 

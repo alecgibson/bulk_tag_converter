@@ -5,6 +5,7 @@ require 'csv'
 
 SLUG_MATCHER = /gov.uk(?<slug>.+)/
 UUID_MATCHER = /[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}/
+BLANK_MATCHER = /^\s*$/
 TAG_COLUMNS_START = 5 # Column number of the first tag entry in a row
 NUMBER_OF_TAGS = 8 # Number of tag entries on a row
 TAG_COLUMNS_END = TAG_COLUMNS_START + NUMBER_OF_TAGS - 1
@@ -34,7 +35,7 @@ def to_rows(spreadsheet)
           tag_id_column = tag_column + TAG_ID_OFFSET
           tag_number = tag_column - TAG_COLUMNS_START + 1
 
-          next if row[tag_column].nil? || row[tag_column].empty?
+          next if row[tag_column].nil? || BLANK_MATCHER =~ row[tag_column]
           raise "Empty URL" if row[URL_COLUMN].nil? || row[URL_COLUMN].empty?
           raise "No Tag#{tag_number} ID" if row[tag_id_column].nil? || row[tag_id_column].empty?
           raise "Invalid Tag#{tag_number} ID" unless UUID_MATCHER =~ row[tag_id_column]
@@ -46,7 +47,7 @@ def to_rows(spreadsheet)
             link_type: LINK_TYPE,
           }
         rescue Exception => e
-          puts "ERROR on line #{row_number}: #{e.message}"
+          puts "ERROR on line #{row_number}: #{e.message}. Skipping line."
         end
       end
     end
