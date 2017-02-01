@@ -3,6 +3,25 @@
 require 'net/http'
 require 'csv'
 
+class TagError < StandardError
+  attr_accessor :tag_number, :tag_name
+
+  def initialize(tag_number, tag_name)
+    @tag_number = tag_number
+    @tag_name = tag_name
+  end
+
+  def message
+    "Invalid Tag#{@tag_number} ID for tag '#{@tag_name}'"
+  end
+end
+
+class UrlError < StandardError
+  def message
+    "Invalid URL"
+  end
+end
+
 SLUG_MATCHER = /gov.uk(?<slug>.+)/
 UUID_MATCHER = /[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}/
 BLANK_MATCHER = /^\s*$/
@@ -12,6 +31,9 @@ TAG_COLUMNS_END = TAG_COLUMNS_START + NUMBER_OF_TAGS - 1
 TAG_ID_OFFSET = 9 # Number added to a tag column number to get the column number of its ID
 LINK_TYPE = 'taxons'
 URL_COLUMN = 1
+
+$tag_errors = []
+$url_errors = []
 
 def validate_arguments
   throw "Expected 2 arguments. Please call: ./bulk_tag_converted <tsv_url> <output_file>" unless ARGV.length == 2
@@ -36,9 +58,8 @@ def to_rows(spreadsheet)
           tag_number = tag_column - TAG_COLUMNS_START + 1
 
           next if row[tag_column].nil? || BLANK_MATCHER =~ row[tag_column]
-          raise "Empty URL" if row[URL_COLUMN].nil? || row[URL_COLUMN].empty?
-          raise "No Tag#{tag_number} ID for tag '#{row[tag_column]}'" if row[tag_id_column].nil? || row[tag_id_column].empty?
-          raise "Invalid Tag#{tag_number} ID for tag '#{row[tag_column]}'" unless UUID_MATCHER =~ row[tag_id_column]
+          raise UrlError.new if row[URL_COLUMN].nil? || row[URL_COLUMN].empty?
+          raise TagError.new(tag_number, row[tag_column]) if row[tag_id_column].nil? || row[tag_id_column].empty? || UUID_MATCHER !~ row[tag_id_column]
 
           r << {
             content_base_path: row[URL_COLUMN].match(SLUG_MATCHER)[:slug],
@@ -46,7 +67,17 @@ def to_rows(spreadsheet)
             link_content_id: row[tag_id_column],
             link_type: LINK_TYPE,
           }
-        rescue Exception => e
+        rescue TagError => e
+          puts "ERROR on line #{row_number}: #{e.message}. Skipping line."
+          $tag_errors << {
+            row_number: row_number,
+            tag_number: e.tag_number,
+            tag_name: e.tag_name,
+          }
+        rescue UrlError => e
+          $url_errors << {
+            row_number: row_number,
+          }
           puts "ERROR on line #{row_number}: #{e.message}. Skipping line."
         end
       end
@@ -65,7 +96,26 @@ def write_to_csv(rows)
   puts "FINISHED"
 end
 
+def write_errors_to_csv
+  puts "Writing Tag errors to 'tag_errors.csv'"
+  CSV.open('tag_errors.csv', "wb") do |csv|
+    csv << ['row_number', 'tag_number', 'tag_name']
+    $tag_errors.each do |row|
+      csv << [row[:row_number], row[:tag_number], row[:tag_name]]
+    end
+  end
+
+  puts "Writing URL errors to 'url_errors.csv'"
+  CSV.open('url_errors.csv', "wb") do |csv|
+    csv << ['row_number']
+    $url_errors.each do |row|
+      csv << [row[:row_number]]
+    end
+  end
+end
+
 validate_arguments
 spreadsheet = get_spreadsheet
 rows = to_rows spreadsheet
 write_to_csv rows
+write_errors_to_csv
