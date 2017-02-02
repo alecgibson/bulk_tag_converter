@@ -4,11 +4,12 @@ require 'net/http'
 require 'csv'
 
 class TagError < StandardError
-  attr_accessor :tag_number, :tag_name
+  attr_accessor :tag_number, :tag_name, :url
 
-  def initialize(tag_number, tag_name)
+  def initialize(tag_number, tag_name, url)
     @tag_number = tag_number
     @tag_name = tag_name
+    @url = url
   end
 
   def message
@@ -59,7 +60,9 @@ def to_rows(spreadsheet)
 
           next if row[tag_column].nil? || BLANK_MATCHER =~ row[tag_column]
           raise UrlError.new if row[URL_COLUMN].nil? || row[URL_COLUMN].empty?
-          raise TagError.new(tag_number, row[tag_column]) if row[tag_id_column].nil? || row[tag_id_column].empty? || UUID_MATCHER !~ row[tag_id_column]
+          if row[tag_id_column].nil? || row[tag_id_column].empty? || UUID_MATCHER !~ row[tag_id_column]
+            raise TagError.new(tag_number, row[tag_column], row[URL_COLUMN])
+          end
 
           r << {
             content_base_path: row[URL_COLUMN].match(SLUG_MATCHER)[:slug],
@@ -71,6 +74,7 @@ def to_rows(spreadsheet)
           puts "ERROR on line #{row_number}: #{e.message}. Skipping line."
           $tag_errors << {
             row_number: row_number,
+            url: e.url,
             tag_number: e.tag_number,
             tag_name: e.tag_name,
           }
@@ -100,9 +104,9 @@ def write_errors_to_csv
   if $tag_errors.any?
     puts "Writing Tag errors to 'tag_errors.csv'"
     CSV.open('tag_errors.csv', "wb") do |csv|
-      csv << ['row_number', 'tag_number', 'tag_name']
+      csv << ['row_number', 'url', 'tag_number', 'tag_name']
       $tag_errors.each do |row|
-        csv << [row[:row_number], row[:tag_number], row[:tag_name]]
+        csv << [row[:row_number], row[:url], row[:tag_number], row[:tag_name]]
       end
     end
   end
