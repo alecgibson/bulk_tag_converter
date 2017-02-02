@@ -97,19 +97,23 @@ def write_to_csv(rows)
 end
 
 def write_errors_to_csv
-  puts "Writing Tag errors to 'tag_errors.csv'"
-  CSV.open('tag_errors.csv', "wb") do |csv|
-    csv << ['row_number', 'tag_number', 'tag_name']
-    $tag_errors.each do |row|
-      csv << [row[:row_number], row[:tag_number], row[:tag_name]]
+  if $tag_errors.any?
+    puts "Writing Tag errors to 'tag_errors.csv'"
+    CSV.open('tag_errors.csv', "wb") do |csv|
+      csv << ['row_number', 'tag_number', 'tag_name']
+      $tag_errors.each do |row|
+        csv << [row[:row_number], row[:tag_number], row[:tag_name]]
+      end
     end
   end
 
-  puts "Writing URL errors to 'url_errors.csv'"
-  CSV.open('url_errors.csv', "wb") do |csv|
-    csv << ['row_number']
-    $url_errors.each do |row|
-      csv << [row[:row_number]]
+  if $url_errors.any?
+    puts "Writing URL errors to 'url_errors.csv'"
+    CSV.open('url_errors.csv', "wb") do |csv|
+      csv << ['row_number']
+      $url_errors.each do |row|
+        csv << [row[:row_number]]
+      end
     end
   end
 end
