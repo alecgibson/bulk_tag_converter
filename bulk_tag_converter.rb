@@ -51,7 +51,10 @@ end
 def to_rows(spreadsheet)
   Enumerator.new do |r|
     row_number = 1 # Start at 1 because of headers
-    CSV.parse(spreadsheet, col_sep: "\t", headers: true) do |row|
+    # quote_char hack is to get around speech marks being interpretted as
+    # columns.
+    # http://stackoverflow.com/questions/8073920/importing-csv-quoting-error-is-driving-me-nuts
+    CSV.parse(spreadsheet, col_sep: "\t", headers: true, quote_char: "\x00") do |row|
       row_number += 1
       TAG_COLUMNS_START.upto(TAG_COLUMNS_END) do |tag_column|
         begin
